@@ -165,12 +165,14 @@
         let rawData = [];
         let currentOS = "";
 
-        window.onload = () => { 
-            fetchInitialData(); 
-            setupFileListeners();
-            generateEmptyMap();
-        };
+window.onload = async () => {
 
+    await sendPost({action:"clearApp"}); // limpa resíduos antigos
+
+    fetchInitialData();
+    setupFileListeners();
+    generateEmptyMap();
+};
         // --- FUNÇÕES DE RECONHECIMENTO DE VOZ ---
         function startVoiceRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -268,21 +270,36 @@
             }, 500);
         }
 
-        async function fetchInitialData() {
-            setApiStatus('loading');
-            try {
-                const response = await fetch(`${API_URL}?action=getImportData&t=${Date.now()}`);
-                const data = await response.json();
-                rawData = data.map(item => ({
-                    ...item,
-                    os: String(item.os).trim(),
-                    ecod: String(item.ecod).trim(),
-                    local: String(item.local || "").toUpperCase().trim()
-                }));
-                populateOSSelect(rawData);
-                setApiStatus('success');
-            } catch (e) { setApiStatus('error', 'ERRO CONEXÃO'); }
+async function fetchInitialData() {
+    setApiStatus('loading');
+
+    try {
+        const response = await fetch(`${API_URL}?action=getImportData&t=${Date.now()}`);
+        const data = await response.json();
+
+        rawData = data.map(item => ({
+            ...item,
+            os: String(item.os).trim(),
+            ecod: String(item.ecod).trim(),
+            local: String(item.local || "").toUpperCase().trim()
+        }));
+
+        populateOSSelect(rawData);
+        setApiStatus('success');
+
+        // LER PARÂMETRO DA URL
+        const params = new URLSearchParams(window.location.search);
+        const osUrl = params.get("os");
+
+        if (osUrl) {
+            document.getElementById("osSelect").value = osUrl;
+            handleOSSelection(osUrl);
         }
+
+    } catch (e) {
+        setApiStatus('error', 'ERRO CONEXÃO');
+    }
+}
 
         function populateOSSelect(data) {
             const select = document.getElementById('osSelect');
@@ -493,7 +510,25 @@
                 setApiStatus('success', 'BANCO LIMPO');
                 setTimeout(() => refreshData(), 1000);
             }); 
+        
         }
+function limparAPPAoSair(){
+
+    const payload = JSON.stringify({
+        action: "clearApp"
+    });
+
+    navigator.sendBeacon(API_URL, payload);
+}
+
+// Desktop refresh/fechar aba
+window.addEventListener("beforeunload", limparAPPAoSair);
+
+// Mobile e troca de aba
+window.addEventListener("pagehide", limparAPPAoSair);
+
+
+
     </script>
 </body>
 </html>
