@@ -146,46 +146,105 @@
             }
         }
 
-        /* CONFIGURAÇÃO EXCLUSIVA PARA IMPRESSÃO DE ETIQUETAS */
-        @media print {
-            body * {
-                visibility: hidden;
+        .gaveta-bim {
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 900;
+            color: white;
+            transition: all 0.3s;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .gaveta-ok {
+            background: #22c55e;
+        }
+
+        .gaveta-alerta {
+            background: #ef4444;
+            animation: pulseBIM 1s infinite;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+        }
+
+        @keyframes pulseBIM {
+            0% {
+                transform: scale(1);
             }
 
-            #print-section,
-            #print-section * {
-                visibility: visible;
+            50% {
+                transform: scale(1.08);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* ================= IMPRESSÃO ================= */
+
+        #print-section {
+            display: none;
+        }
+
+        @media print {
+
+            html,
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100mm;
+                height: auto;
+                overflow: hidden;
+                background: white;
+            }
+
+            body>*:not(#print-section) {
+                display: none !important;
             }
 
             #print-section {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                display: block !important;
+                display: flex !important;
+                flex-direction: column;
+                width: 100mm;
+                margin: 0;
+                padding: 0;
             }
 
             @page {
-                size: 80mm 40mm;
+                size: 100mm 25mm;
                 margin: 0;
             }
 
             .label-to-print {
-                width: 80mm;
-                height: 40mm;
-                padding: 4mm;
-                page-break-after: always;
+
+                width: 100mm;
+                height: 25mm;
+
+                padding: 2mm 3mm;
+
+                box-sizing: border-box;
+
                 display: flex;
                 flex-direction: column;
-                justify-content: flex-start;
+                justify-content: center;
+
                 font-family: Arial, sans-serif;
                 color: black;
-                border: none;
-            }
-        }
 
-        #print-section {
-            display: none;
+                overflow: hidden;
+
+                page-break-after: always;
+                break-after: page;
+            }
+
+            .label-to-print:last-child {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
         }
     </style>
 </head>
@@ -201,8 +260,17 @@
                         onerror="this.src='https://placehold.co/150x50?text=LOGO'">
                 </div>
                 <div class="border-l border-slate-200 pl-4">
-                    <h1 class="text-xl md:text-2xl font-bold text-slate-800 leading-tight">Controle de Estoque</h1>
-                    <p class="text-blue-600 font-semibold text-xs md:text-sm">Painel Kanban com Integração Alexa</p>
+                    <h1 class="text-xl md:text-2xl font-bold text-slate-800 leading-tight">
+                        Controle de Estoque
+                    </h1>
+                    <p class="text-blue-600 font-semibold text-xs md:text-sm">Painel Kanban</p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div id="apiIndicator" class="w-2.5 h-2.5 bg-slate-300 rounded-full">
+                        </div>
+                        <span id="apiText" class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                            INICIANDO
+                        </span>
+                    </div>
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2">
@@ -231,28 +299,36 @@
         </header>
 
         <!-- Filtros, Status e Conexão de IoT -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
             <div class="glass-card p-4 md:p-6 rounded-2xl shadow-sm lg:col-span-2">
                 <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider">Ordem de
                     Serviço</label>
-                <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex flex-col lg:flex-row gap-3">
                     <div class="relative flex-1">
                         <select id="osSelect"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-24 py-3 text-lg font-bold text-slate-700 focus:ring-4 focus:ring-blue-100 focus:outline-none transition appearance-none cursor-pointer">
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-20 py-3 text-lg font-bold text-slate-700 focus:ring-4 focus:ring-blue-100 focus:outline-none transition appearance-none cursor-pointer">
                             <option value="">Conectando à nuvem...</option>
                         </select>
                         <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                            <button id="voiceBtn" onclick="startVoiceRecognition()"
-                                class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Ditar OS">
+                            <button id="clearOSBtn" onclick="clearOSSelection()"
+                                class="p-2 text-slate-400 hover:text-red-500 transition-colors hidden"
+                                title="Limpar Seleção">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
                                     stroke-linejoin="round">
-                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                                    <line x1="12" y1="19" x2="12" y2="22" />
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
                                 </svg>
                             </button>
-                            <button id="clearOSBtn" onclick="clearOSSelection()"
+                        </div>
+                    </div>
+                    <div class="relative flex-1">
+                        <select id="ecodSelect"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-20 py-3 text-lg font-bold text-slate-700 focus:ring-4 focus:ring-blue-100 focus:outline-none transition appearance-none cursor-pointer">
+                            <option value="">Selecione um E-Cod</option>
+                        </select>
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <button id="clearEcodBtn" onclick="clearEcodSelection()"
                                 class="p-2 text-slate-400 hover:text-red-500 transition-colors hidden"
                                 title="Limpar Seleção">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -278,50 +354,23 @@
             </div>
 
             <!-- Painel de Status da API Google Sheets -->
-            <div class="glass-card p-4 rounded-2xl shadow-sm flex flex-col justify-center items-center text-center">
-                <span class="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Planilha Nuvem</span>
-                <div id="apiStatusContainer" class="flex items-center gap-2 text-slate-400 font-bold">
-                    <div id="apiIndicator" class="w-3 h-3 bg-slate-300 rounded-full"></div>
-                    <span id="apiText" class="text-xs uppercase">Iniciando</span>
+            <!-- PAINEL BIM -->
+            <div class="glass-card p-4 rounded-2xl shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <span class="text-[13px] font-bold text-slate-700 uppercase tracking-widest">
+
+                            Painel BIM
+                        </span>
+                    </div>
+                    <button onclick="silenciarAlarme()"
+                        class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg font-bold transition">
+                        🔇
+                    </button>
+                </div>
+                <div id="bimGrid" class="grid grid-cols-5 gap-2">
                 </div>
             </div>
-
-            <!-- Painel de Status da Conectividade Alexa (HTTP Polling com dweet.io - JSONP compatível com Canvas) -->
-            <div class="glass-card p-4 rounded-2xl shadow-sm flex flex-col justify-between items-center text-center">
-                <div class="w-full">
-                    <span class="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Canal de Voz
-                        Alexa</span>
-                    <div id="alexaStatusContainer"
-                        class="flex items-center justify-center gap-2 text-slate-400 font-bold">
-                        <div id="alexaIndicator" class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                        <span id="alexaText" class="text-xs uppercase">Dweet JSONP Ativo</span>
-                    </div>
-                    <div class="text-[9px] text-slate-400 mt-0.5 font-semibold" id="alexaKeyInfo">Aguardando comando...
-                    </div>
-                </div>
-                <!-- Simulador de voz integrado para testes fáceis na nuvem -->
-                <div class="mt-2 pt-2 border-t border-slate-100 w-full">
-                    <div class="flex gap-1">
-                        <input type="text" id="simOSInput" placeholder="Nº OS"
-                            class="w-1/2 text-xs px-2 py-1 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 font-bold text-center">
-                        <button onclick="triggerSimulatedAlexa()"
-                            class="w-1/2 bg-blue-500 hover:bg-blue-600 text-white text-[10px] py-1 px-1 rounded-lg font-bold transition">Simular
-                            Voz</button>
-                    </div>
-                    <p class="text-[8px] text-slate-400 mt-1">Gera um sinal de teste real na nuvem dweet!</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Alerta de Notificação Flutuante / Voz Recente -->
-        <div id="voiceAlert"
-            class="hidden mb-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-4 flex items-center gap-3 transition-all duration-300">
-            <span class="flex h-3 w-3 relative">
-                <span
-                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-            </span>
-            <span class="text-sm font-semibold" id="voiceAlertMsg">Alexa disparou o comando da OS...</span>
         </div>
 
         <!-- Navegação de Abas -->
@@ -334,20 +383,33 @@
                     class="pb-3 text-sm font-bold uppercase tracking-widest text-slate-400 transition-all">Mapa de
                     Prateleiras</button>
             </div>
-            <div class="ml-auto pb-2">
+            <div class="ml-auto pb-2 flex gap-2">
+
+                <button id="btnNaoLocalizados" onclick="desmarcarNaoLocalizados()"
+                    class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition shadow-md active:scale-95">
+                    Desmarcar Não Localizados
+                </button>
+
+                <button id="btnTodos" onclick="toggleTodosPrints()"
+                    class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold transition shadow-md active:scale-95">
+                    Desmarcar Todos
+                </button>
+
                 <button onclick="printLabels()"
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition shadow-md active:scale-95">Imprimir
-                    Etiquetas</button>
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition shadow-md active:scale-95">
+                    Imprimir Etiquetas
+                </button>
+
             </div>
+
         </div>
 
         <!-- Conteúdos -->
-        <div id="view-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+        <div id="view-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pb-20">
             <div class="col-span-full py-20 text-center text-slate-400 font-bold">Aguardando seleção de OS...</div>
         </div>
-
         <div id="view-map" class="hidden pb-20">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="shelvesContainer"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8" id="shelvesContainer"></div>
         </div>
     </div>
 
@@ -365,234 +427,56 @@
             </div>
         </div>
     </div>
-
-    <!-- Seção de Impressão (Invisível na tela) -->
     <div id="print-section"></div>
-
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzWcjZ8QJEXMa89aW4hdSXlqpYjb19GT1VDxQCbaEP5iS7V1svrWbf7n2dw7OpeiXXmYg/exec";
-
-        // Nome exclusivo de canal do dweet
-        const DWEET_THING_NAME = "kanban-estoque-alexa-99211";
+        const audioBIM = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audioBIM.loop = true;
+        let audioLiberado = false;
         const params = new URLSearchParams(window.location.search);
         const osURL = params.get("os");
-
         let rawData = [];
         let currentOS = "";
+        let currentEcod = "";
         let lastPolledOS = "0";
         let pollingInterval;
-
+        const urlParams = new URLSearchParams(window.location.search);
+        const osDaURL = urlParams.get("os");
+document.addEventListener('click', async () => {
+    if (audioLiberado) return;
+    try {
+        audioBIM.volume = 0;
+        await audioBIM.play();
+        audioBIM.pause();
+        audioBIM.currentTime = 0;
+        audioBIM.volume = 1;
+        audioLiberado = true;
+        console.log('Áudio liberado');
+    } catch (e) {
+        console.log('Falha ao liberar áudio', e);
+    }
+}, { once: true });
         window.onload = async () => {
+            await sendPost({ action: "clearApp" });
             await fetchInitialData();
             setupFileListeners();
             generateEmptyMap();
-            initAlexaDweetPolling();
-            const params =
-                new URLSearchParams(
-                    window.location.search
-                );
-            const osURL =
-                params.get("os");
-            if (osURL) {
-                console.log(
-                    "OS recebida da URL:",
-                    osURL
-                );
+            carregarBIM();
+            setInterval(carregarBIM, 3000);
+            if (osDaURL) {
+                currentOS = osDaURL;
                 setTimeout(() => {
-                    handleIncomingAlexaOS(
-                        osURL
-                    );
+                    const select = document.getElementById('osSelect');
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value === osDaURL) {
+                            select.selectedIndex = i;
+                            handleOSSelection(osDaURL);
+                            break;
+                        }
+                    }
                 }, 1000);
             }
         };
-
-        // ENVIAR DWEET USANDO SCRIPT TAG (JSONP) - IGNORA CORS E ERRO DE FETCH COMPLETAMENTE
-        function sendDweetJSONP(os) {
-            return new Promise((resolve, reject) => {
-                const callbackName = 'dweet_send_callback_' + Math.round(Math.random() * 1000000);
-
-                // Cria handler global temporário para a resposta
-                window[callbackName] = function (data) {
-                    delete window[callbackName];
-                    const scriptEl = document.getElementById('jsonp_dweet_send');
-                    if (scriptEl) scriptEl.remove();
-                    resolve(data);
-                };
-
-                // Limpa script de envio anterior se houver
-                const existing = document.getElementById('jsonp_dweet_send');
-                if (existing) existing.remove();
-
-                const script = document.createElement('script');
-                script.id = 'jsonp_dweet_send';
-                // dweet.io suporta passagem de dados na query string e resposta via callback JSONP
-                script.src = `https://dweet.io/dweet/for/${DWEET_THING_NAME}?os=${os}&callback=${callbackName}`;
-                script.onerror = (err) => {
-                    delete window[callbackName];
-                    script.remove();
-                    reject(err);
-                };
-                document.body.appendChild(script);
-            });
-        }
-
-        // LER DWEET USANDO SCRIPT TAG (JSONP) - MONITORAMENTO TOTALMENTE COMPATÍVEL
-        function pollDweetJSONP() {
-            const callbackName = 'dweet_get_callback_' + Math.round(Math.random() * 1000000);
-
-            window[callbackName] = function (json) {
-                delete window[callbackName];
-                const scriptEl = document.getElementById('jsonp_dweet_get');
-                if (scriptEl) scriptEl.remove();
-
-                if (json.this === "succeeded" && json.with && json.with.length > 0) {
-                    const dweetData = json.with[0].content;
-                    const receivedOS = String(dweetData.os || dweetData.value || "").trim().replace(/\D/g, '');
-
-                    if (receivedOS && receivedOS !== "0" && receivedOS !== lastPolledOS) {
-                        lastPolledOS = receivedOS;
-                        console.log("Nova OS recebida por canal de voz:", receivedOS);
-                        handleIncomingAlexaOS(receivedOS);
-                    }
-                }
-            };
-
-            const existing = document.getElementById('jsonp_dweet_get');
-            if (existing) existing.remove();
-
-            const script = document.createElement('script');
-            script.id = 'jsonp_dweet_get';
-            script.src = `https://dweet.io/get/latest/dweet/for/${DWEET_THING_NAME}?callback=${callbackName}&t=${Date.now()}`;
-            script.onerror = () => {
-                delete window[callbackName];
-                script.remove();
-            };
-            document.body.appendChild(script);
-        }
-
-        // INICIALIZA MONITORAMENTO DE VOZ DA ALEXA (HTTP POLLING VIA JSONP)
-        function initAlexaDweetPolling() {
-            const indicator = document.getElementById('alexaIndicator');
-            const text = document.getElementById('alexaText');
-            const keyInfo = document.getElementById('alexaKeyInfo');
-
-            keyInfo.textContent = `Canal: ${DWEET_THING_NAME}`;
-
-            indicator.className = "w-3 h-3 bg-emerald-500 rounded-full animate-pulse";
-            text.textContent = "DWEET ATIVO";
-
-            if (pollingInterval) clearInterval(pollingInterval);
-
-            // Verifica novas mensagens a cada 3 segundos via Script Tags (JSONP)
-            pollingInterval = setInterval(() => {
-                pollDweetJSONP();
-            }, 3000);
-        }
-
-        // SIMULADOR DE COMANDOS DE VOZ (Posta no dweet usando o pipeline JSONP sem usar fetch)
-        async function triggerSimulatedAlexa() {
-            const input = document.getElementById('simOSInput');
-            const os = input.value.trim().replace(/\D/g, '');
-            if (!os) {
-                openModal("Simulação", "Por favor, digite uma OS válida para simular.", () => { });
-                return;
-            }
-            const btn = document.querySelector("button[onclick='triggerSimulatedAlexa()']");
-            try {
-                btn.textContent = "Enviando...";
-                btn.disabled = true;
-
-                // Envia o dweet simulado usando o bypass JSONP
-                await sendDweetJSONP(os);
-
-                btn.textContent = "Enviado!";
-                input.value = "";
-                setTimeout(() => {
-                    btn.textContent = "Simular Voz";
-                    btn.disabled = false;
-                }, 1500);
-            } catch (e) {
-                console.error("Erro ao simular dweet via JSONP:", e);
-                openModal("Erro", "Falha de conexão com o pipeline JSONP. Tente novamente.", () => { });
-                btn.textContent = "Simular Voz";
-                btn.disabled = false;
-            }
-        }
-
-        // TRATAMENTO DA OS VINDA DA ALEXA
-        function handleIncomingAlexaOS(osNumber) {
-            const select = document.getElementById('osSelect');
-            if (!select) return;
-
-            // Mostra o banner azul de comando recebido
-            const alertBox = document.getElementById('voiceAlert');
-            const alertMsg = document.getElementById('voiceAlertMsg');
-            alertMsg.textContent = `Alexa disparou comando de voz! Selecionando OS ${osNumber}...`;
-            alertBox.classList.remove('hidden');
-
-            setTimeout(() => {
-                alertBox.classList.add('hidden');
-            }, 6000);
-
-            let found = false;
-            for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].value === osNumber) {
-                    select.selectedIndex = i;
-                    handleOSSelection(osNumber);
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) {
-                console.log(`OS ${osNumber} não encontrada no dropdown. Atualizando dados da planilha...`);
-                fetchInitialData().then(() => {
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === osNumber) {
-                            select.selectedIndex = i;
-                            handleOSSelection(osNumber);
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        alertMsg.textContent = `A OS ${osNumber} dita pela Alexa não foi localizada na sua base de dados atual.`;
-                    }
-                });
-            }
-        }
-
-        // RECONHECIMENTO DE VOZ DIRETO PELO MICROFONE DO COMPUTADOR
-        function startVoiceRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                openModal("Não Suportado", "Este navegador não suporta o recurso de microfone local.", () => { });
-                return;
-            }
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'pt-BR';
-            const voiceBtn = document.getElementById('voiceBtn');
-            voiceBtn.classList.add('voice-active');
-            setApiStatus('loading', 'OUVINDO...');
-            recognition.start();
-            recognition.onresult = (event) => {
-                let osNumber = event.results[0][0].transcript.replace(/\D/g, '');
-                if (osNumber) {
-                    const select = document.getElementById('osSelect');
-                    let found = false;
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === osNumber) {
-                            select.selectedIndex = i;
-                            handleOSSelection(osNumber);
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) setApiStatus('error', 'OS NÃO ENCONTRADA');
-                }
-            };
-            recognition.onspeechend = () => { recognition.stop(); voiceBtn.classList.remove('voice-active'); };
-        }
 
         function switchTab(view) {
             document.getElementById('view-cards').classList.toggle('hidden', view !== 'cards');
@@ -620,6 +504,7 @@
                     local: String(item.local || "").toUpperCase().trim()
                 }));
                 populateOSSelect(rawData);
+                populateEcodSelect(rawData);
                 setApiStatus('success');
             } catch (e) { setApiStatus('error', 'ERRO CONEXÃO'); }
         }
@@ -634,26 +519,19 @@
                 select.appendChild(opt);
             });
             select.onchange = (e) => handleOSSelection(e.target.value);
-
             if (currentOS) {
                 select.value = currentOS;
             }
         }
 
-        async function handleOSSelection(os) {
+        function handleOSSelection(os) {
             currentOS = os;
-            const board = document.getElementById('view-cards');
-            document.getElementById('clearOSBtn').classList.toggle('hidden', !os);
-            if (!os) {
-                board.innerHTML = '<div class="col-span-full py-20 text-center text-slate-400 font-bold">Aguardando seleção de OS...</div>';
-                resetMap();
-                return;
-            }
-            const filtered = rawData.filter(item => item.os === os);
-            renderKanban(filtered);
-            updateMap(filtered);
-            await sendPost({ action: 'syncApp', data: filtered });
+            document.getElementById('clearOSBtn')
+                .classList.toggle('hidden', !os);
+            aplicarFiltros();
         }
+
+
 
         function clearOSSelection() {
             document.getElementById('osSelect').value = "";
@@ -665,12 +543,21 @@
             board.innerHTML = items.length ? '' : '<div class="col-span-full py-20 text-center text-slate-300 font-bold uppercase tracking-widest">Nenhum item pendente</div>';
             items.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "glass-card p-6 rounded-[2rem] shadow-sm border-l-[12px] border-l-blue-500 hover:shadow-xl transition-all duration-300";
+                card.className = "glass-card p-4 rounded-2xl shadow-sm border-l-[6px] border-l-blue-500 hover:shadow-md transition-all duration-300";
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
+                    <div class="flex justify-between items-start mb-2">
                         <div class="flex-1">
-                            <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full tracking-wider">CÓD: ${item.ecod}</span>
-                            <h3 class="font-bold text-slate-800 text-lg mt-3 leading-tight">${item.descricao}</h3>
+                            <div class="mb-2">
+                                <span class="text-[10px] font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full tracking-wider">
+                                    OS ${item.os}
+                                </span>
+                            </div>
+                            <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full tracking-wider">
+                                CÓD: ${item.ecod}
+                            </span>
+                            <h3 class="font-bold text-slate-800 text-sm mt-2 leading-tight">
+                                ${item.descricao}
+                            </h3>
                         </div>
                         <div class="ml-4 flex flex-col items-center gap-3">
                              <div class="flex flex-col items-center">
@@ -683,18 +570,25 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 mb-6">
-                        <div class="w-2.5 h-2.5 rounded-full ${item.local === 'NÃO LOCALIZADO' ? 'bg-red-500' : 'bg-emerald-500'}"></div>
-                        <span class="text-xs font-bold uppercase ${item.local === 'NÃO LOCALIZADO' ? 'text-red-500' : 'text-slate-400'}">${item.local || 'SEM LOCAL'}</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                            <div class="text-[10px] text-blue-400 font-black uppercase mb-1">Pedido OS</div>
-                            <div class="font-black text-blue-700 text-2xl">${item.qtd}</div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full ${item.local === 'NÃO LOCALIZADO' ? 'bg-red-500' : 'bg-emerald-500'}"></div>
+                                <span class="text-xs font-bold uppercase ${item.local === 'NÃO LOCALIZADO' ? 'text-red-500' : 'text-slate-400'}">
+                                    ${item.local || 'SEM LOCAL'}
+                                </span>
+                            </div>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                                Lote: ${item.lote || '-'}
+                            </span>
                         </div>
-                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <div class="bg-blue-50 p-2 rounded-xl border border-blue-100">
+                            <div class="text-[10px] text-blue-400 font-black uppercase mb-1">Pedido OS</div>
+                            <div class="font-black text-blue-700 text-lg">${item.qtd}</div>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded-xl border border-slate-200">
                             <div class="text-[10px] text-slate-400 font-black uppercase mb-1">Estoque</div>
-                            <div class="font-black text-slate-700 text-2xl">${item.totalEstoque}</div>
+                            <div class="font-black text-slate-700 text-lg">${item.totalEstoque}</div>
                         </div>
                     </div>`;
                 board.appendChild(card);
@@ -761,27 +655,93 @@
         }
 
         // IMPRESSÃO
+
+
         function printLabels() {
-            const selected = document.querySelectorAll(".print-checkbox:checked");
+
+            const cardsVisiveis = document.querySelectorAll(
+                '#view-cards .glass-card'
+            );
+
+            const selected = [];
+
+            cardsVisiveis.forEach(card => {
+
+                const checkbox = card.querySelector(
+                    '.print-checkbox:checked'
+                );
+
+                if (checkbox) {
+                    selected.push(checkbox);
+                }
+
+            });
+
             if (!selected.length) {
-                openModal("Nenhum item selecionado", "Por favor, marque pelo menos uma caixa de seleção 'Print' para emitir etiquetas.", () => { });
+
+                openModal(
+                    "Nenhum item selecionado",
+                    "Marque ao menos um item para imprimir.",
+                    () => { }
+                );
+
                 return;
             }
+
             const printSec = document.getElementById('print-section');
+
             printSec.innerHTML = '';
+
             selected.forEach(cb => {
-                const ecod = cb.getAttribute('data-ecod');
-                const os = cb.getAttribute('data-os');
-                const item = rawData.find(i => i.ecod === ecod && i.os === os);
+
+                const ecod = cb.dataset.ecod;
+                const os = cb.dataset.os;
+
+                const item = rawData.find(i =>
+                    i.ecod === ecod &&
+                    i.os === os
+                );
+
+                if (!item) return;
+
                 const label = document.createElement('div');
+
                 label.className = 'label-to-print';
+
                 label.innerHTML = `
-                    <div style="font-size: 10px; font-weight: bold;">OS: ${os}</div>
-                    <div style="font-size: 24px; font-weight: 900; margin: 2px 0;">ECODE: ${ecod}</div>
-                    <div style="font-size: 12px; font-weight: bold; border-bottom: 1px dashed black; padding-bottom: 2px;">LOTE: -</div>
-                    <div style="font-size: 10px; margin-top: 5px;">${item ? item.descricao : ''}</div>`;
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                font-size:11px;
+                font-weight:700;
+            ">
+                <span>OS: ${os}</span>
+                <span>QTDE: ${item.qtd || 0}</span>
+            </div>
+
+            <div style="
+                font-size:11px;
+                font-weight:700;
+                margin:2mm 0;
+            ">
+                ECODE: ${ecod}
+            </div>
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                font-size:11px;
+                font-weight:700;
+            ">
+                <span>LOTE: ${item.lote || '-'}</span>
+                <span>LOCAL: ${item.local || '-'}</span>
+            </div>
+        `;
+
                 printSec.appendChild(label);
+
             });
+
             window.print();
         }
 
@@ -825,9 +785,18 @@
                     const workbook = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                     const mapped = jsonData.map(row => [
-                        row["Dt. Recebto"] || "", String(row["Nº OS"] || "").trim(), "", "",
-                        row["Qtde Total LM"] || 0, String(row["Código LM"] || "").trim(), "", "",
-                        row["Descrição LM"] || "", "", row["Qtde OS"] || 0
+                        row["Dt. Recebto"] || "",                 // A
+                        String(row["Nº OS"] || "").trim(),        // B
+                        String(row["Cód.Item"] || "").trim(),     // C
+                        String(row["PN Item"] || "").trim(),     // D
+                        row["Qtde Total LM"] || 0,               // E
+                        String(row["Código LM"] || "").trim(),   // F
+                        row["Tipo LM"] || "",                                       // G
+                        row["PN LM"] || "",                                       // H
+                        row["Descrição LM"] || "",               // I
+                        row["Qtde UN LM"] || "",                                       // J
+                        row["Qtde Total LM"] || 0,                     // K
+                        row["Lote"] || ""                        // L
                     ]).filter(r => r[1]);
                     setApiStatus('loading', 'IMPORTANDO...');
                     if (await sendPost({ action: 'importCSV', payload: mapped })) location.reload();
@@ -835,6 +804,224 @@
                 reader.readAsArrayBuffer(file);
             };
         }
+
+        async function aplicarFiltros() {
+            // SEM FILTRO = SEM CARDS + LIMPA APP
+            if (!currentOS && !currentEcod) {
+                renderKanban([]);
+                updateMap([]);
+                await sendPost({
+                    action: 'clearApp'
+                });
+
+                return;
+            }
+            let filtrados = [...rawData];
+            // FILTRO OS
+            if (currentOS) {
+                filtrados = filtrados.filter(
+                    item => item.os === currentOS
+                );
+            }
+            // FILTRO E-COD
+            if (currentEcod) {
+                filtrados = filtrados.filter(item =>
+                    String(item.ecod)
+                        .toUpperCase()
+                        .includes(currentEcod)
+                );
+            }
+            // CARDS
+            renderKanban(filtrados);
+            // MAPA
+            updateMap(filtrados);
+
+            // APP
+            await sendPost({
+                action: 'syncApp',
+                data: filtrados
+            });
+        }
+
+        function populateEcodSelect(data) {
+            const select = document.getElementById('ecodSelect');
+            const uniqueEcods = [
+                ...new Set(
+                    data.map(item => item.ecod)
+                )
+            ].filter(ecod => ecod && ecod !== "undefined");
+            select.innerHTML =
+                '<option value="">Selecione um E-Cod</option>';
+            uniqueEcods
+                .sort()
+                .forEach(ecod => {
+                    const opt = document.createElement('option');
+                    opt.value = ecod;
+                    opt.textContent = ecod;
+                    select.appendChild(opt);
+
+                });
+            select.onchange = (e) => {
+                currentEcod = e.target.value;
+                document.getElementById('clearEcodBtn')
+                    .classList.toggle('hidden', !currentEcod);
+                aplicarFiltros();
+            };
+        }
+
+        function clearEcodSelection() {
+            currentEcod = "";
+            document.getElementById('ecodSelect').value = "";
+            document.getElementById('clearEcodBtn')
+                .classList.add('hidden');
+            aplicarFiltros();
+        }
+
+        let naoLocalizadosDesmarcados = false;
+        let todosDesmarcados = false;
+        function desmarcarNaoLocalizados() {
+            const cards = document.querySelectorAll(
+                '#view-cards .glass-card'
+            );
+            cards.forEach(card => {
+                const localSpan = card.querySelector(
+                    '.text-xs.font-bold.uppercase'
+                );
+                const checkbox = card.querySelector(
+                    '.print-checkbox'
+                );
+                if (!localSpan || !checkbox) return;
+                const textoLocal = localSpan.textContent.trim();
+                if (textoLocal === 'NÃO LOCALIZADO') {
+                    checkbox.checked = naoLocalizadosDesmarcados;
+                }
+            });
+            naoLocalizadosDesmarcados =
+                !naoLocalizadosDesmarcados;
+            const btn = document.getElementById(
+                'btnNaoLocalizados'
+            );
+            btn.textContent =
+                naoLocalizadosDesmarcados
+                    ? 'Marcar Não Localizados'
+                    : 'Desmarcar Não Localizados';
+        }
+
+        function toggleTodosPrints() {
+            const checkboxes = document.querySelectorAll(
+                '#view-cards .print-checkbox'
+            );
+            checkboxes.forEach(cb => {
+                cb.checked = todosDesmarcados;
+            });
+            todosDesmarcados =
+                !todosDesmarcados;
+            const btn = document.getElementById(
+                'btnTodos'
+            );
+            btn.textContent =
+                todosDesmarcados
+                    ? 'Marcar Todos'
+                    : 'Desmarcar Todos';
+        }
+
+        let ultimoStatusBIM = {};
+        async function carregarBIM() {
+            try {
+                const response =
+                    await fetch(`${API_URL}?action=getBIM&t=${Date.now()}`);
+                const data = await response.json();
+                const grid = document.getElementById('bimGrid');
+                grid.innerHTML = '';
+                let existeAlerta = false;
+                let novoAlerta = false;
+                data.forEach(item => {
+                    const status =
+                        String(item.status || '')
+                            .toUpperCase();
+                    const gaveta =
+                        item.gaveta;
+                    const card =
+                        document.createElement('div');
+                    card.className =
+                        `gaveta-bim ${status === 'VERMELHO'
+                            ? 'gaveta-alerta'
+                            : 'gaveta-ok'
+                        }`;
+                    card.innerHTML = gaveta;
+card.onclick = () => {
+    const statusAtual = String(item.status || '').toUpperCase();
+    if (statusAtual !== 'VERMELHO') return;
+    openModal(
+        "Resetar Gaveta",
+        `Deseja resetar a gaveta ${gaveta}?`,
+        async () => {
+            await resetarGaveta(gaveta);
+        }
+    );
+};
+                    grid.appendChild(card);
+                    if (status === 'VERMELHO') {
+                        existeAlerta = true;
+                        if (
+                            ultimoStatusBIM[gaveta] !== 'VERMELHO'
+                        ) {
+                            novoAlerta = true;
+                        }
+                    }
+                    ultimoStatusBIM[gaveta] = status;
+                });
+if (novoAlerta) {
+    alarmeSilenciado = false;
+}
+if (
+    existeAlerta &&
+    !alarmeSilenciado &&
+    audioLiberado
+) {
+    if (audioBIM.paused) {
+        audioBIM.currentTime = 0;
+        audioBIM.play()
+            .then(() => {
+                console.log('Tocando alarme BIM');
+            })
+            .catch(err => {
+                console.log('Erro áudio:', err);
+            });
+    }
+}
+if (!existeAlerta) {
+    audioBIM.pause();
+    audioBIM.currentTime = 0;
+}
+            } catch (e) {
+                console.log('Erro BIM', e);
+            }
+        }
+
+async function resetarGaveta(gaveta) {
+    const ok = await sendPost({
+        action: 'updateBIM',
+        gaveta,
+        status: 'VERDE'
+    });
+    if (!ok) {
+        console.log('Erro ao atualizar gaveta');
+        return;
+    }
+    ultimoStatusBIM[gaveta] = 'VERDE';
+    setTimeout(() => {
+        carregarBIM();
+    }, 800);
+}
+
+let alarmeSilenciado = false;
+function silenciarAlarme() {
+    alarmeSilenciado = true;
+    audioBIM.pause();
+    audioBIM.currentTime = 0;
+}
+
     </script>
 </body>
 
